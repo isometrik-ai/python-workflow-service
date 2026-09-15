@@ -1,0 +1,8 @@
+Run migrations from the repository root:
+
+```bash
+cd src
+alembic upgrade head
+```
+
+The initial revision creates the `work_order` schema, enums, and all domain tables adapted from `ats-home-craft-supabase`. Revision `20260913_000006` renames the schema to **`fm`** (configurable via `POSTGRES_SCHEMA`, default `fm`).

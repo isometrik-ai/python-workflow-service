@@ -1,0 +1,30 @@
+image: atlassian/default-image:latest
+
+options:
+  docker: true
+
+definitions:
+  services:
+    docker-with-large-memory:
+      memory: 7168
+      type: docker
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Setup Docker
+          size: 2x
+          services: [docker-with-large-memory]
+          caches:
+            - docker
+          script:
+            # prepare data
+            - export IMAGE_NAME="python-workflow-service"
+            - export VERSION=fanzly
+            # Login to Docker Hub
+            - echo "${DOCKER_PASS}" | docker login --username ${DOCKER_USER} --password-stdin
+            # Build the docker image
+            - docker build -t ${DOCKER_USER}/${IMAGE_NAME}:${VERSION} .
+            # Push the tagged image
+            - docker push ${DOCKER_USER}/${IMAGE_NAME}:${VERSION}

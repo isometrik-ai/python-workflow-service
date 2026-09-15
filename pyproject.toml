@@ -1,0 +1,187 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-work-order-service"
+version = "1.0.0"
+description = "FastAPI starter for work-order services with health checks, PostgreSQL, Redis, and reusable platform scaffolding"
+readme = "README.md"
+authors = [
+    {name = "Rahul Sharma", email = "rahul@3embed.com"}
+]
+maintainers = [
+    {name = "Rahul Sharma", email = "rahul@3embed.com"}
+]
+requires-python = ">=3.13"
+license = "MIT"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Framework :: FastAPI",
+]
+keywords = ["fastapi", "work-order", "api", "postgresql", "redis"]
+urls = {Homepage = "https://github.com/yourusername/python-work-order-service"}
+dependencies = [
+    "alembic==1.16.5",
+    "anyio==4.9.0",
+    "asyncpg==0.30.0",
+    "fastapi==0.115.12",
+    "greenlet>=3.3.1",
+    "pydantic==2.11.3",
+    "pydantic-settings==2.8.1",
+    "python-dotenv==1.1.0",
+    "redis[hiredis]==5.2.1",
+    "slowapi==0.1.9",
+    "SQLAlchemy==2.0.40",
+    "starlette==0.46.2",
+    "uvicorn==0.34.1",
+    "boto3==1.37.34",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.5",
+    "pylint==3.3.7",
+    "pytest-mock==3.14.0",
+    "pytest-asyncio==0.26.0",
+    "pytest-cov==6.1.1",
+    "httpx==0.28.1",
+    "aiosqlite==0.21.0",
+    "black==25.1.0",
+    "isort==6.0.1",
+    "autoflake==2.3.1",
+    "pre-commit==4.2.0",
+    "ruff==0.13.2",
+    "mypy==1.9.0",
+    "types-redis==4.6.0.20240311",
+]
+production = [
+    "gunicorn==21.2.0",
+    "uvicorn[standard]==0.34.1",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = [
+    "tests/v1/test_health.py",
+    "tests/v1/test_api_keys.py",
+    "tests/v1/test_asset_categories.py",
+    "tests/v1/test_assets.py",
+    "tests/v1/test_form_templates.py",
+    "tests/v1/test_contracts.py",
+    "tests/v1/test_work_orders.py",
+    "tests/v1/test_invoices.py",
+    "tests/v1/test_payments.py",
+    "tests/v1/test_triggers.py",
+    "tests/v1/test_logs.py",
+    "tests/v1/test_scheduler.py",
+    "tests/v1/test_vendor_portal.py",
+    "tests/v1/test_presigned_url.py",
+    "tests/unit",
+]
+python_files = "test_*.py"
+python_functions = "test_*"
+python_classes = "Test*"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning",
+    "ignore::RuntimeWarning",
+    "default",
+]
+addopts = [
+    "--verbose",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "api: API tests",
+    "db: Database tests",
+    "slow: Slow running tests",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+include = '\.pyi?$'
+extend-exclude = '''
+^/venv/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip = [".git", "venv", "build", "dist"]
+known_first_party = ["app"]
+known_third_party = ["fastapi", "pydantic", "sqlalchemy"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.autoflake]
+in-place = true
+recursive = true
+remove-all-unused-imports = true
+remove-unused-variables = true
+remove-duplicate-keys = true
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/migrations/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "*/build/*",
+    "*/dist/*",
+    "src/app/main.py",
+    "src/app/core/setup.py",
+    "src/app/workers/*",
+    "src/app/models/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+skip_empty = true
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self\\.debug",
+    "if settings\\.DEBUG",
+    "if __name__ == .__main__.:",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "Python Work Order Service Coverage Report"

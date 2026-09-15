@@ -1,0 +1,62 @@
+{
+  "auth": {
+    "errors": {
+      "insufficient_permissions": "You don't have permission to access this resource",
+      "user_not_found": "Requested user with ID {user_id} not found",
+      "authentication_failed": "Authentication failed",
+      "unauthorized_user_id": "You cannot perform actions for user_id '{provided_id}'. it is not your own user info.",
+      "agency_subject_required": "Agency sessions require header x-subject-user-id with the managed user id.",
+      "unauthorized": "Authentication is required to access this resource"
+    }
+  },
+  "assets": {
+    "errors": {
+      "duplicate_code": "An asset with this code already exists for the project"
+    }
+  },
+  "invoices": {
+    "errors": {
+      "duplicate_number": "An invoice with this number already exists for the project"
+    }
+  },
+  "presigned_url": {
+    "success": {
+      "presigned_url_generated": "Presigned upload URL generated successfully"
+    },
+    "errors": {
+      "r2_credentials_not_configured": "Object storage credentials are not configured"
+    }
+  },
+  "api_keys": {
+    "errors": {
+      "invalid": "Invalid API key",
+      "project_required": "API key is not scoped to a project",
+      "missing_or_invalid": "Missing or invalid API key or tenant/project headers",
+      "invalid_scope": "No active API key found for the supplied tenant and project",
+      "internal_token_required": "Internal service token is not configured",
+      "invalid_internal_token": "Invalid internal service token",
+      "already_exists": "An active API key already exists for this tenant and project"
+    }
+  },
+  "success": {
+    "created": "Resource created successfully",
+    "updated": "Resource updated successfully",
+    "deleted": "Resource deleted successfully",
+    "retrieved": "Resource retrieved successfully",
+    "lists_retrieved": "Lists retrieved successfully"
+  },
+  "errors": {
+    "not_found": "Resource not found",
+    "forbidden": "You don't have permission to access this resource",
+    "unauthorized": "Authentication is required to access this resource",
+    "validation": "Validation error: {message}",
+    "server_error": "An internal server error occurred",
+    "missing_required_param": "Missing required parameter: {param_name}",
+    "method_not_allowed": "Method {method} is not allowed for this path: {path}. Please use the correct HTTP method according to the API documentation.",
+    "missing_headers": "Required headers missing: {headers}",
+    "invalid_authorization_format": "Invalid authorization format: {error}",
+    "rate_limit_exceeded": "Rate limit exceeded. Please try again after some time.",
+    "required_headers_missing": "Required headers missing: {missing_headers}",
+    "invalid_platform": "Invalid platform value '{platform}': {error}"
+  }
+}

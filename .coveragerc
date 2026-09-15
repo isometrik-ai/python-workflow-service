@@ -1,0 +1,39 @@
+[run]
+source = src
+omit =
+    */tests/*
+    */migrations/*
+    */docs/*
+    */__init__.py
+    */main.py
+    */config.py
+    */settings.py
+    */workers/*
+    */grpc_stubs/*
+    */core/setup.py
+    */core/db/postgres/triggers.py
+    */core/db/clickhouse/*
+    */core/db/typesense/sync.py
+    */core/services/google_vision_service.py
+    */business/services/popularity_refresh_service.py
+    */core/db/typesense/client.py
+    */business/services/typesense_search_service.py
+    */business/services/aws_multipart_upload_service.py
+    */crud/crud_webhook_deliveries.py
+    */crud/crud_webhook_subscriptions.py
+    */business/webhook_emit.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+    raise ImportError
+    except ImportError:
+    def main
+    raise AssertionError
+
+[html]
+directory = coverage_html_report

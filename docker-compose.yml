@@ -1,0 +1,107 @@
+services:
+  api:
+    build: .
+    container_name: python-work-order-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_URI: postgresql+asyncpg://postgres:password@postgres:5432/work_order_service
+      REDIS_HOST: redis
+      REDIS_URL: redis://redis:6379/0
+      WOM_EMBEDDED_SCHEDULER: "false"
+      WOM_EMBEDDED_WEBHOOK_WORKER: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      options:
+        max-size: "1m"
+        max-file: "3"
+
+  scheduler-worker:
+    build: .
+    container_name: work-order-scheduler-worker
+    restart: unless-stopped
+    command: python -m app.workers.cli.run_scheduler_worker
+    env_file:
+      - .env
+    environment:
+      POSTGRES_URI: postgresql+asyncpg://postgres:password@postgres:5432/work_order_service
+      REDIS_HOST: redis
+      REDIS_URL: redis://redis:6379/0
+      WOM_SCHEDULER_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    logging:
+      options:
+        max-size: "1m"
+        max-file: "3"
+
+  webhook-worker:
+    build: .
+    container_name: work-order-webhook-worker
+    restart: unless-stopped
+    command: python -m app.workers.cli.run_webhook_worker
+    env_file:
+      - .env
+    environment:
+      POSTGRES_URI: postgresql+asyncpg://postgres:password@postgres:5432/work_order_service
+      REDIS_HOST: redis
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    logging:
+      options:
+        max-size: "1m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: work-order-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: work_order_service
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d work_order_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: work-order-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
