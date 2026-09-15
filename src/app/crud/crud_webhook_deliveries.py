@@ -103,7 +103,7 @@ class CRUDWebhookDelivery:
             )
             .order_by(WebhookDelivery.id.asc())
             .limit(limit)
-            .with_for_update(skip_locked=True)
+            .with_for_update(of=WebhookDelivery, skip_locked=True)
         )
         result = await db.execute(stmt)
         rows = result.all()

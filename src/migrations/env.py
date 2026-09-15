@@ -9,7 +9,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config.app_config import settings
-from app.core.db.postgres.database import Base
+from app.core.db.postgres.database import Base, postgres_engine_kwargs
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -79,6 +79,7 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        **postgres_engine_kwargs(),
     )
 
     async with connectable.connect() as connection:

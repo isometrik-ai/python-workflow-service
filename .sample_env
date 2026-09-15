@@ -16,6 +16,8 @@ ENVIRONMENT=local
 # ------------- database settings -------------
 POSTGRES_URI=postgresql+asyncpg://postgres:password@postgres:5432/work_order_service
 POSTGRES_SCHEMA=fm
+# Set to 0 for Supabase/PgBouncer transaction pooler (port 6543). Auto-detected if omitted.
+# POSTGRES_STATEMENT_CACHE_SIZE=0
 POSTGRES_DB=work_order_service
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=password

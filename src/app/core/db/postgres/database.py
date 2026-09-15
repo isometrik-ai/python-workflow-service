@@ -20,11 +20,13 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.core.config.app_config import EnvironmentOption, settings
 from app.core.utils.logger import logger
@@ -32,6 +34,40 @@ from app.core.utils.logger import logger
 
 class Base(DeclarativeBase):
     """SQLAlchemy declarative base for ORM models."""
+
+
+def _uses_transaction_pooler(uri: str) -> bool:
+    """Return True when the URI targets a PgBouncer-style transaction pooler."""
+    lowered = uri.lower()
+    return "pooler" in lowered or ":6543/" in lowered or ":6543?" in lowered
+
+
+def _requires_pooler_safe_connect_args() -> bool:
+    """Return True when prepared statements must be disabled for the DB endpoint."""
+    if settings.POSTGRES_STATEMENT_CACHE_SIZE is not None:
+        return settings.POSTGRES_STATEMENT_CACHE_SIZE == 0
+    return _uses_transaction_pooler(settings.POSTGRES_URI)
+
+
+def postgres_engine_kwargs() -> dict[str, object]:
+    """Build PostgreSQL engine kwargs for Supabase/PgBouncer transaction poolers."""
+    if not _requires_pooler_safe_connect_args():
+        if settings.POSTGRES_STATEMENT_CACHE_SIZE is not None:
+            return {
+                "connect_args": {
+                    "statement_cache_size": settings.POSTGRES_STATEMENT_CACHE_SIZE,
+                },
+            }
+        return {}
+
+    return {
+        "poolclass": NullPool,
+        "connect_args": {
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+            "prepared_statement_name_func": lambda: f"__asyncpg_{uuid4()}__",
+        },
+    }
 
 
 def _create_async_engine():
@@ -46,15 +82,25 @@ def _create_async_engine():
         )
 
     # PostgreSQL configuration for other environments
+    engine_kwargs: dict[str, object] = {
+        "echo": False,
+        "future": True,
+        "pool_pre_ping": True,
+        **postgres_engine_kwargs(),
+    }
+    if "poolclass" not in engine_kwargs:
+        engine_kwargs.update(
+            {
+                "pool_size": 20,
+                "max_overflow": 30,
+                "pool_recycle": 3600,
+                "pool_timeout": 30,
+            }
+        )
+
     return create_async_engine(
         settings.POSTGRES_URI,
-        echo=False,
-        future=True,
-        pool_size=20,  # Number of connections to maintain
-        max_overflow=30,  # Additional connections that can be created
-        pool_pre_ping=True,  # Validate connections before use
-        pool_recycle=3600,  # Recycle connections after 1 hour
-        pool_timeout=30,  # Timeout for getting connection from pool
+        **engine_kwargs,
     )
 
 

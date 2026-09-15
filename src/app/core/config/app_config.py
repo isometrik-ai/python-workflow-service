@@ -54,6 +54,10 @@ class DatabaseSettings(BaseSettings):
         default="postgresql+asyncpg://postgres:password@localhost:5432/work_order_service",
     )
     POSTGRES_SCHEMA: str = config("POSTGRES_SCHEMA", default="fm")
+    POSTGRES_STATEMENT_CACHE_SIZE: int | None = config(
+        "POSTGRES_STATEMENT_CACHE_SIZE",
+        default=None,
+    )
     REDIS_HOST: str = config("REDIS_HOST", default="localhost")
     REDIS_PORT: int = config("REDIS_PORT", default=6379)
     REDIS_USERNAME: str | None = config("REDIS_USERNAME", default="default")
