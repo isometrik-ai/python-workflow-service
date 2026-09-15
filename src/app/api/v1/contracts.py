@@ -121,7 +121,7 @@ async def create_contract(
         tenant_id=scope.tenant_id,
         project_id=scope.project_id,
     )
-    record = await service.create(body.model_dump(mode="json"))
+    record = await service.create(body.model_dump())
     payload = ContractResponse.model_validate(record)
     return success_response(
         request=request,
@@ -158,7 +158,7 @@ async def update_contract(
         tenant_id=scope.tenant_id,
         project_id=scope.project_id,
     )
-    record = await service.update(contract_id, body.model_dump(exclude_unset=True, mode="json"))
+    record = await service.update(contract_id, body.model_dump(exclude_unset=True))
     payload = ContractResponse.model_validate(record)
     return success_response(
         request=request,

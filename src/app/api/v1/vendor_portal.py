@@ -73,7 +73,7 @@ async def vendor_update_work_order(
     service = VendorPortalService(db=db)
     record = await service.update_work_order(
         work_order,
-        body.model_dump(exclude_unset=True, mode="json"),
+        body.model_dump(exclude_unset=True),
     )
     payload = WorkOrderResponse.model_validate(record)
     return success_response(
@@ -107,7 +107,7 @@ async def vendor_submit_invoice(
     service = VendorPortalService(db=db)
     record = await service.submit_invoice(
         work_order,
-        body.model_dump(mode="json"),
+        body.model_dump(),
     )
     payload = InvoiceResponse.model_validate(record)
     return success_response(

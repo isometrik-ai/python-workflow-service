@@ -120,7 +120,7 @@ async def create_trigger(
         tenant_id=scope.tenant_id,
         project_id=scope.project_id,
     )
-    record = await service.create(body.model_dump(mode="json"))
+    record = await service.create(body.model_dump())
     payload = TriggerResponse.model_validate(record)
     return success_response(
         request=request,
@@ -157,7 +157,7 @@ async def update_trigger(
         tenant_id=scope.tenant_id,
         project_id=scope.project_id,
     )
-    record = await service.update(trigger_id, body.model_dump(exclude_unset=True, mode="json"))
+    record = await service.update(trigger_id, body.model_dump(exclude_unset=True))
     payload = TriggerResponse.model_validate(record)
     return success_response(
         request=request,
