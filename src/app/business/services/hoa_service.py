@@ -17,6 +17,25 @@ _client: Any = None
 _cache: dict[str, tuple[float, Any]] = {}
 CACHE_TTL = 300
 HOA_TIMEOUT = 4
+_ACTIVE_STATUS = "active"
+
+
+def _company_status(item: dict[str, Any]) -> str:
+    """Resolve lifecycle status from HoA company payloads (API field names vary)."""
+    for key in ("status", "record_status"):
+        value = item.get(key)
+        if value not in (None, ""):
+            return str(value)
+    if item.get("deleted") is True or item.get("deleted_at"):
+        return "deleted"
+    return ""
+
+
+def _active_companies_only(companies: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep only active CRM companies for vendor pickers."""
+    return [
+        company for company in companies if str(company.get("status", "")).lower() == _ACTIVE_STATUS
+    ]
 
 
 def _format_company(item: dict[str, Any]) -> dict[str, Any]:
@@ -27,7 +46,7 @@ def _format_company(item: dict[str, Any]) -> dict[str, Any]:
         "email": str(item.get("email", "")),
         "phone": str(item.get("phone", "")),
         "industry": str(item.get("industry", "")),
-        "status": str(item.get("status", "")),
+        "status": _company_status(item),
         "source": "houseofapps",
     }
 
@@ -55,15 +74,26 @@ def _sdk_configured() -> bool:
 def _search_companies_sync(query: str, page: int = 1, page_size: int = 50) -> list[dict[str, Any]]:
     """Search companies via the HouseOfApps SDK (sync)."""
     client = _get_client()
-    result = client.companies.list(search=query, page=page, page_size=page_size)
-    return [_format_company(item) for item in result.items]
+    try:
+        result = client.companies.list(
+            search=query,
+            page=page,
+            page_size=page_size,
+            status=_ACTIVE_STATUS,
+        )
+    except TypeError:
+        result = client.companies.list(search=query, page=page, page_size=page_size)
+    return _active_companies_only([_format_company(item) for item in result.items])
 
 
 def _list_companies_sync(page: int = 1, page_size: int = 100) -> list[dict[str, Any]]:
     """List companies via the HouseOfApps SDK (sync)."""
     client = _get_client()
-    result = client.companies.list(page=page, page_size=page_size)
-    return [_format_company(item) for item in result.items]
+    try:
+        result = client.companies.list(page=page, page_size=page_size, status=_ACTIVE_STATUS)
+    except TypeError:
+        result = client.companies.list(page=page, page_size=page_size)
+    return _active_companies_only([_format_company(item) for item in result.items])
 
 
 def _create_company_sync(name: str, **kwargs: Any) -> dict[str, Any]:
@@ -86,14 +116,14 @@ async def _httpx_list_companies(page: int = 1, page_size: int = 100) -> list[dic
         response = await client.get(
             url,
             headers=headers,
-            params={"page": page, "page_size": page_size},
+            params={"page": page, "page_size": page_size, "status": _ACTIVE_STATUS},
         )
         response.raise_for_status()
         payload = response.json()
         items = payload.get("items") or payload.get("data") or payload
         if isinstance(items, dict):
             items = items.get("items", [])
-        return [_format_company(item) for item in items]
+        return _active_companies_only([_format_company(item) for item in items])
 
 
 async def _httpx_search_companies(
@@ -113,14 +143,19 @@ async def _httpx_search_companies(
         response = await client.get(
             url,
             headers=headers,
-            params={"search": query, "page": page, "page_size": page_size},
+            params={
+                "search": query,
+                "page": page,
+                "page_size": page_size,
+                "status": _ACTIVE_STATUS,
+            },
         )
         response.raise_for_status()
         payload = response.json()
         items = payload.get("items") or payload.get("data") or payload
         if isinstance(items, dict):
             items = items.get("items", [])
-        return [_format_company(item) for item in items]
+        return _active_companies_only([_format_company(item) for item in items])
 
 
 async def _httpx_create_company(name: str, **kwargs: Any) -> dict[str, Any]:

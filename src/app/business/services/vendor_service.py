@@ -17,6 +17,23 @@ _SEEDED_VENDORS = (
     {"id": "ven-3", "name": "AquaCare Plumbing"},
 )
 
+_ACTIVE_STATUS = "active"
+
+
+def _active_vendors_only(vendors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Contract vendor pickers: active CRM companies plus workflow-only local ids."""
+    active: list[dict[str, Any]] = []
+    for vendor in vendors:
+        source = str(vendor.get("source", "local")).lower()
+        if source == "houseofapps":
+            if str(vendor.get("status", "")).lower() == _ACTIVE_STATUS:
+                active.append(vendor)
+            continue
+        vendor_id = str(vendor.get("id", ""))
+        if vendor_id.startswith("ven-"):
+            active.append(vendor)
+    return active
+
 
 class VendorService:
     """Vendor operations using HoA with tenant/project-scoped local fallback."""
@@ -57,9 +74,14 @@ class VendorService:
                 local.append({**seeded, "source": "local"})
         return local
 
+    @staticmethod
+    def _workflow_local_vendors(local: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Local rows that are not stale copies of CRM companies (asset supplier ids)."""
+        return [vendor for vendor in local if str(vendor.get("id", "")).startswith("ven-")]
+
     async def list(self, *, query: str | None = None) -> dict[str, Any]:
         """List vendors merged from HoA and local fallback."""
-        local = await self.list_local_vendors()
+        local = self._workflow_local_vendors(await self.list_local_vendors())
         companies = await hoa_service.list_companies(page=1, page_size=100, fallback=local)
 
         seen_ids: set[str] = set()
@@ -74,14 +96,16 @@ class VendorService:
             ql = query.lower()
             merged = [vendor for vendor in merged if ql in vendor.get("name", "").lower()]
 
+        merged = _active_vendors_only(merged)
         return {"total": len(merged), "data": merged}
 
     async def search(self, query: str) -> dict[str, Any]:
         """Search vendors via HoA with local fallback."""
         if not query.strip():
             return {"total": 0, "data": []}
-        local = await self.list_local_vendors()
+        local = self._workflow_local_vendors(await self.list_local_vendors())
         companies = await hoa_service.search_companies(query, fallback=local)
+        companies = _active_vendors_only(companies)
         return {"total": len(companies), "data": companies}
 
     async def create(self, name: str) -> dict[str, Any]:
