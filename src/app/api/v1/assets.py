@@ -1,8 +1,9 @@
 """API routes for assets."""
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.business.services.asset_import_service import MAX_IMPORT_BYTES, AssetImportService
 from app.business.services.asset_service import AssetService
 from app.core.constants.status_codes import CustomStatusCode
 from app.core.db.postgres.database import async_get_db
@@ -11,6 +12,8 @@ from app.core.security.api_key_auth import get_api_key_scope
 from app.core.utils.response_factory import list_response, success_response
 from app.schemas.assets import (
     AssetDetailDataResponse,
+    AssetImportDataResponse,
+    AssetImportResult,
     AssetListDataResponse,
     AssetResponse,
     CreateAssetRequest,
@@ -72,6 +75,55 @@ async def list_assets(
         page_size=page_size,
         message_key="success.lists_retrieved",
         custom_code=CustomStatusCode.SUCCESS,
+    )
+
+
+@router.post(
+    "/import",
+    response_model=None,
+    responses={
+        200: {
+            "model": AssetImportDataResponse,
+            "description": "Asset workbook imported",
+        },
+        **common_responses,
+    },
+    summary="Import assets",
+)
+async def import_assets(
+    request: Request,
+    file: UploadFile = File(..., description="Asset workbook (.xlsx)"),
+    sheet: str | None = Query(
+        None,
+        description="Worksheet to import. Defaults to the Assets sheet.",
+    ),
+    scope: ApiKeyScope = Depends(get_api_key_scope),
+    db: AsyncSession = Depends(async_get_db),
+):
+    """Import assets from one worksheet in an .xlsx workbook.
+
+    Valid rows are created. Invalid rows are reported and skipped. A category
+    from the template list is created when the project does not have it yet.
+    Each distinct supplier is matched to a vendor, or created once, and linked
+    on the imported assets.
+    """
+    content = await file.read(MAX_IMPORT_BYTES + 1)
+    service = AssetImportService(
+        db=db,
+        tenant_id=scope.tenant_id,
+        project_id=scope.project_id,
+    )
+    result = await service.import_workbook(
+        content,
+        filename=file.filename or "",
+        sheet_name=sheet,
+    )
+    payload = AssetImportResult.model_validate(result)
+    return success_response(
+        request=request,
+        message_key="assets.success.imported",
+        custom_code=CustomStatusCode.SUCCESS,
+        data=payload.model_dump(mode="json"),
     )
 
 

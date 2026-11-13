@@ -202,3 +202,62 @@ def test_delete_asset_success(client):
     body = response.json()
     assert body["data"]["id"] == "asset_abc123"
     service.delete.assert_awaited_once_with("asset_abc123")
+
+
+def test_import_assets_success(client):
+    """Import posts the workbook to the import service and returns its summary."""
+    result = {
+        "sheet": "Tower-01",
+        "total_rows": 1,
+        "created": 1,
+        "failed": 0,
+        "errors": [],
+        "created_codes": ["IMP-4"],
+        "vendors_matched": [],
+        "vendors_created": [{"name": "Kirloskar", "id": "ven-9"}],
+        "vendors_unlinked": [],
+    }
+    patcher = patch("app.api.v1.assets.AssetImportService")
+    service_cls = patcher.start()
+    instance = MagicMock()
+    instance.import_workbook = AsyncMock(return_value=result)
+    service_cls.return_value = instance
+    try:
+        response = client.post(
+            f"{ASSETS_BASE}/import",
+            params={"sheet": "Tower-01"},
+            files={
+                "file": (
+                    "fire.xlsx",
+                    b"PK-fake",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+        )
+    finally:
+        patcher.stop()
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["status"] == "success"
+    assert body["message"] == "Assets imported successfully"
+    assert body["data"]["created_codes"] == ["IMP-4"]
+    assert body["data"]["vendors_created"][0]["id"] == "ven-9"
+    instance.import_workbook.assert_awaited_once_with(
+        b"PK-fake",
+        filename="fire.xlsx",
+        sheet_name="Tower-01",
+    )
+
+
+def test_import_assets_rejects_non_xlsx(client):
+    """A file that is not an xlsx workbook is rejected before any rows are read."""
+    response = client.post(
+        f"{ASSETS_BASE}/import",
+        files={"file": ("assets.csv", b"name,code", "text/csv")},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    body = response.json()
+    assert body["status"] == "error"
+    assert "xlsx" in body["message"]

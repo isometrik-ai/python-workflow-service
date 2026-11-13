@@ -1,10 +1,12 @@
 """Database operations for assets."""
 
+from __future__ import annotations
+
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.asset import Asset
@@ -80,6 +82,47 @@ class CRUDAsset:
         row = result.scalar_one_or_none()
         return _asset_to_dict(row) if row else None
 
+    async def list_codes(
+        self,
+        db: AsyncSession,
+        *,
+        tenant_id: str,
+        project_id: str,
+    ) -> set[str]:
+        """Return every asset code for the project, including soft-deleted rows.
+
+        The unique constraint is on project and code and still applies after a soft delete.
+        """
+        stmt = select(Asset.code).where(
+            Asset.tenant_id == tenant_id,
+            Asset.project_id == project_id,
+        )
+        result = await db.execute(stmt)
+        return {code for code in result.scalars().all() if code}
+
+    async def release_deleted_codes(
+        self,
+        db: AsyncSession,
+        *,
+        tenant_id: str,
+        project_id: str,
+        codes: set[str],
+    ) -> None:
+        """Rename soft-deleted codes so a new import can use them again."""
+        if not codes:
+            return
+        stmt = select(Asset).where(
+            Asset.tenant_id == tenant_id,
+            Asset.project_id == project_id,
+            Asset.record_status == RecordStatus.DELETED.value,
+            Asset.code.in_(codes),
+        )
+        result = await db.execute(stmt)
+        for row in result.scalars().all():
+            suffix = f"~{row.id}"
+            row.code = f"{row.code[: 100 - len(suffix)]}{suffix}"
+        await db.flush()
+
     async def create(
         self,
         db: AsyncSession,
@@ -99,6 +142,34 @@ class CRUDAsset:
         await db.flush()
         await db.refresh(row)
         return _asset_to_dict(row)
+
+    async def create_many(
+        self,
+        db: AsyncSession,
+        *,
+        tenant_id: str,
+        project_id: str,
+        items: list[dict[str, Any]],
+    ) -> list[str]:
+        """Insert many assets in batched multi-row statements."""
+        if not items:
+            return []
+        codes: list[str] = []
+        rows: list[dict[str, Any]] = []
+        for data in items:
+            codes.append(data["code"])
+            rows.append(
+                {
+                    "id": self.new_id(),
+                    "tenant_id": tenant_id,
+                    "project_id": project_id,
+                    "record_status": RecordStatus.ACTIVE.value,
+                    **data,
+                }
+            )
+        for start in range(0, len(rows), _IMPORT_BATCH_SIZE):
+            await db.execute(insert(Asset).values(rows[start : start + _IMPORT_BATCH_SIZE]))
+        return codes
 
     async def update(
         self,
@@ -196,5 +267,7 @@ def _asset_to_dict(row: Asset) -> dict[str, Any]:
         "updated_at": row.updated_at,
     }
 
+
+_IMPORT_BATCH_SIZE = 200
 
 crud_assets = CRUDAsset()

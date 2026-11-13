@@ -51,5 +51,12 @@ class AssetCategory(Base):
             "project_id",
             "record_status",
         ),
+        Index(
+            "uq_wo_asset_categories_project_name_active",
+            "project_id",
+            text("lower(btrim(name))"),
+            unique=True,
+            postgresql_where=text("record_status = 'active'"),
+        ),
         {"schema": DB_SCHEMA},
     )
