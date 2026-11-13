@@ -188,3 +188,36 @@ class DeleteIdResponse(BaseModel):
 
 class DeleteIdDataResponse(DataResponse[DeleteIdResponse]):
     """Success envelope for delete operations."""
+
+
+class AssetImportError(BaseModel):
+    """One worksheet row the import did not create."""
+
+    row: int
+    field: str
+    message: str
+
+
+class AssetImportVendor(BaseModel):
+    """Vendor matched or created while importing assets."""
+
+    name: str
+    id: str
+
+
+class AssetImportResult(BaseModel):
+    """Summary of an asset workbook import."""
+
+    sheet: str
+    total_rows: int
+    created: int
+    failed: int
+    errors: list[AssetImportError] = Field(default_factory=list)
+    created_codes: list[str] = Field(default_factory=list)
+    vendors_matched: list[AssetImportVendor] = Field(default_factory=list)
+    vendors_created: list[AssetImportVendor] = Field(default_factory=list)
+    vendors_unlinked: list[str] = Field(default_factory=list)
+
+
+class AssetImportDataResponse(DataResponse[AssetImportResult]):
+    """Success envelope for an asset import."""

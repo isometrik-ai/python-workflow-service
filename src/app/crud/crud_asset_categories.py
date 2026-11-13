@@ -1,5 +1,7 @@
 """Database operations for asset categories."""
 
+from __future__ import annotations
+
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -62,6 +64,50 @@ class CRUDAssetCategory:
             AssetCategory.tenant_id == tenant_id,
             AssetCategory.project_id == project_id,
             AssetCategory.record_status == RecordStatus.ACTIVE.value,
+        )
+        result = await db.execute(stmt)
+        row = result.scalar_one_or_none()
+        return _asset_category_to_dict(row) if row else None
+
+    async def list_active(
+        self,
+        db: AsyncSession,
+        *,
+        tenant_id: str,
+        project_id: str,
+    ) -> list[dict[str, Any]]:
+        """Return every active category for the tenant and project."""
+        stmt = (
+            select(AssetCategory)
+            .where(
+                AssetCategory.tenant_id == tenant_id,
+                AssetCategory.project_id == project_id,
+                AssetCategory.record_status == RecordStatus.ACTIVE.value,
+            )
+            .order_by(AssetCategory.created_at, AssetCategory.name)
+        )
+        result = await db.execute(stmt)
+        return [_asset_category_to_dict(row) for row in result.scalars().all()]
+
+    async def get_active_by_label(
+        self,
+        db: AsyncSession,
+        *,
+        tenant_id: str,
+        project_id: str,
+        label: str,
+    ) -> dict[str, Any] | None:
+        """Return the oldest active category whose name matches the normalized label."""
+        stmt = (
+            select(AssetCategory)
+            .where(
+                AssetCategory.tenant_id == tenant_id,
+                AssetCategory.project_id == project_id,
+                AssetCategory.record_status == RecordStatus.ACTIVE.value,
+                func.lower(func.btrim(AssetCategory.name)) == label,
+            )
+            .order_by(AssetCategory.created_at)
+            .limit(1)
         )
         result = await db.execute(stmt)
         row = result.scalar_one_or_none()

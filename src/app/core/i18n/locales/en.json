@@ -10,6 +10,9 @@
     }
   },
   "assets": {
+    "success": {
+      "imported": "Assets imported successfully"
+    },
     "errors": {
       "duplicate_code": "An asset with this code already exists for the project"
     }
